@@ -48,7 +48,8 @@ class PolygonInteractor(object):
         self.line = Line2D(
             x, y, marker=marker, markerfacecolor=markerfacecolor, animated=True)
         self.text = Text(
-            self.spoly.centroid.x, self.spoly.centroid.y, text=label, animated=True)
+            self.spoly.centroid.x, self.spoly.centroid.y, text=label, animated=True,
+            color='w', backgroundcolor='k')
         self.ax.add_artist(self.text)
         self.ax.add_line(self.line)
         # self._update_line(poly)
