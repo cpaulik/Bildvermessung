@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This is an example to show how to build cross-GUI applications using
 matplotlib event handling to interact with objects on the canvas

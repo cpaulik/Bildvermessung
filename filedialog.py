@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import Tkinter as Tk
 import Tkconstants
 import tkFileDialog
@@ -15,7 +16,7 @@ class ImageSelector(object):
 
         self.polys = polygons
         # define buttons
-        Tk.Button(root, text='askdirectory', command=self.askdirectory).pack(
+        Tk.Button(root, text='Verzeichnis auswählen', command=self.askdirectory).pack(
             **button_opt)
         button = Tk.Button(master=root, text='->', command=self.next_image)
         button.pack(side=Tk.RIGHT)
