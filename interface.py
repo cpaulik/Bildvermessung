@@ -33,7 +33,7 @@ a = f.add_subplot(111)
 
 # a tk.DrawingArea
 canvas = FigureCanvasTkAgg(f, master=root)
-polys = TwoPolys(f, a, "test_images/3dcubes.jpg")
+polys = TwoPolys(f, a)
 canvas.show()
 canvas.get_tk_widget().pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
