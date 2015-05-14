@@ -249,18 +249,26 @@ class TwoPolys(object):
         self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt")
         # ax.add_line(p.line)
 
-    def load_new_image(self, impath):
+    def load_new_image(self, impath, x1=None, y1=None, x2=None, y2=None):
         self.p1.remove()
         self.p2.remove()
         show_image(self.ax, impath)
 
         xs, ys = sane_rect_coord(self.ax)
+        if x1 is not None:
+            xs = x1
+        if y1 is not None:
+            ys = y1
         poly = Polygon(
             list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
         self.ax.add_patch(poly)
         self.p1 = PolygonInteractor(self.ax, poly, label="Torso")
 
         xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
+        if x2 is not None:
+            xs1 = x2
+        if y2 is not None:
+            ys1 = y2
         poly1 = Polygon(
             list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
         self.ax.add_patch(poly1)

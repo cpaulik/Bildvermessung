@@ -3,6 +3,7 @@ import Tkconstants
 import tkFileDialog
 import glob
 import os
+import json
 
 
 class ImageSelector(object):
@@ -42,9 +43,47 @@ class ImageSelector(object):
 
     def update_image(self):
         print "load", self.filelist[self.selectedfile]
-        self.polys.load_new_image(self.filelist[self.selectedfile])
+        x1, y1, x2, y2 = self.get_json_coordinates()
+        self.polys.load_new_image(
+            self.filelist[self.selectedfile], x1=x1, y1=y1, x2=x2, y2=y2)
+
+    def get_current_json_fname(self):
+        current_fname = self.filelist[self.selectedfile]
+        path, fname = os.path.split(current_fname)
+        fname, ext = os.path.splitext(fname)
+        return os.path.join(path, fname + ".json")
+
+    def get_json_coordinates(self):
+        """
+        load json coordinates from file if a .json file with the same
+        name as the image exists.
+        """
+
+        if os.path.exists(self.get_current_json_fname()):
+            x1, y1, x2, y2 = self.load_current_json_coord()
+        else:
+            x1, y1, x2, y2 = None, None, None, None
+
+        return x1, y1, x2, y2
+
+    def load_current_json_coord(self):
+
+        fid = open(self.get_current_json_fname(), mode='r')
+        data = json.load(fid)
+        return data['x1'], data['y1'], data['x2'], data['y2']
+
+    def save_current_json_coord(self):
+
+        x1 = list(self.polys.p1.poly.get_xy()[:, 0])
+        y1 = list(self.polys.p1.poly.get_xy()[:, 1])
+        x2 = list(self.polys.p2.poly.get_xy()[:, 0])
+        y2 = list(self.polys.p2.poly.get_xy()[:, 1])
+        fid = open(self.get_current_json_fname(), mode='w')
+        json.dump({'x1': x1, 'y1': y1,
+                   'x2': x2, 'y2': y2}, fid)
 
     def next_image(self):
+        self.save_current_json_coord()
         self.selectedfile += 1
         if self.selectedfile >= len(self.filelist):
             print "Last File"
@@ -53,6 +92,7 @@ class ImageSelector(object):
             self.update_image()
 
     def prev_image(self):
+        self.save_current_json_coord()
         self.selectedfile -= 1
         if self.selectedfile < 0:
             print "First File"

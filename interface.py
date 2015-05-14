@@ -46,12 +46,17 @@ def on_key_event(event):
     print('you pressed %s' % event.key)
     if event.key == 'enter':
         dirdialog.next_image()
+    if event.key == 'right':
+        dirdialog.next_image()
+    if event.key == 'left':
+        dirdialog.prev_image()
     key_press_handler(event, canvas, toolbar)
 
 canvas.mpl_connect('key_press_event', on_key_event)
 
 
 def _quit():
+    dirdialog.save_current_json_coord()
     root.quit()     # stops mainloop
     root.destroy()  # this is necessary on Windows to prevent
     # Fatal Python Error: PyEval_RestoreThread: NULL tstate
