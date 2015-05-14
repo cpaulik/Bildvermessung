@@ -8,8 +8,10 @@ from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from matplotlib.artist import Artist
 from matplotlib.mlab import dist_point_to_segment
+import matplotlib.pyplot as plt
 from shapely.geometry import Polygon as SPolygon
 import matplotlib.image as mpimg
+import os
 
 
 class PolygonInteractor(object):
@@ -49,12 +51,17 @@ class PolygonInteractor(object):
         cid = self.poly.add_callback(self.poly_changed)
         self._ind = None  # the active vert
 
-        canvas.mpl_connect('draw_event', self.draw_callback)
-        canvas.mpl_connect('button_press_event', self.button_press_callback)
-        canvas.mpl_connect('key_press_event', self.key_press_callback)
-        canvas.mpl_connect(
-            'button_release_event', self.button_release_callback)
-        canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
+        self.connections = []
+        self.connections.append(
+            canvas.mpl_connect('draw_event', self.draw_callback))
+        self.connections.append(
+            canvas.mpl_connect('button_press_event', self.button_press_callback))
+        self.connections.append(
+            canvas.mpl_connect('key_press_event', self.key_press_callback))
+        self.connections.append(canvas.mpl_connect(
+            'button_release_event', self.button_release_callback))
+        self.connections.append(
+            canvas.mpl_connect('motion_notify_event', self.motion_notify_callback))
         self.canvas = canvas
 
     @property
@@ -166,6 +173,13 @@ class PolygonInteractor(object):
         # update shapely polygon
         self.spoly = SPolygon(self.poly.get_xy())
 
+    def remove(self):
+        for connection in self.connections:
+            self.canvas.mpl_disconnect(connection)
+
+        self.poly.remove()
+        self.line.remove()
+
 
 def show_image(ax, imgpath):
     im = mpimg.imread(imgpath)
@@ -204,23 +218,48 @@ def sane_rect_coord(ax, xperc=[0.1, 0.4], yperc=[0.1, 0.9]):
 
     return xs, ys
 
+
+class TwoPolys(object):
+
+    def __init__(self, fig, ax, impath):
+
+        self.ax = ax
+        self.fig = fig
+        show_image(ax, impath)
+
+        xs, ys = sane_rect_coord(self.ax)
+        poly = Polygon(
+            list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
+        self.ax.add_patch(poly)
+        self.p1 = PolygonInteractor(self.ax, poly)
+
+        xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
+        poly1 = Polygon(
+            list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
+        self.ax.add_patch(poly1)
+        self.p2 = PolygonInteractor(self.ax, poly1)
+        # ax.add_line(p.line)
+        self.ax.set_title(os.path.split(impath)[1])
+
+    def load_new_image(self, impath):
+        self.p1.remove()
+        self.p2.remove()
+        show_image(self.ax, impath)
+
+        xs, ys = sane_rect_coord(self.ax)
+        poly = Polygon(
+            list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
+        self.ax.add_patch(poly)
+        self.p1 = PolygonInteractor(self.ax, poly)
+
+        xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
+        poly1 = Polygon(
+            list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
+        self.ax.add_patch(poly1)
+        self.p2 = PolygonInteractor(self.ax, poly1)
+        self.ax.set_title(os.path.split(impath)[1])
+        self.fig.canvas.draw()
+
+
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-
-    fig, ax = plt.subplots()
-    show_image(ax, "test_images/3dcubes.jpg")
-
-    xs, ys = sane_rect_coord(ax)
-    poly = Polygon(
-        list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
-    ax.add_patch(poly)
-    p = PolygonInteractor(ax, poly)
-
-    xs1, ys1 = sane_rect_coord(ax, xperc=[0.6, 0.9])
-    poly1 = Polygon(
-        list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
-    ax.add_patch(poly1)
-    p1 = PolygonInteractor(ax, poly1)
-    # ax.add_line(p.line)
-    ax.set_title('Click and drag a point to move it')
-    plt.show()
+    pass
