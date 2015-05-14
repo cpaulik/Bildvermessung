@@ -5,6 +5,7 @@ matplotlib event handling to interact with objects on the canvas
 """
 import numpy as np
 from matplotlib.lines import Line2D
+from matplotlib.text import Text
 from matplotlib.patches import Polygon
 from matplotlib.artist import Artist
 from matplotlib.mlab import dist_point_to_segment
@@ -34,7 +35,7 @@ class PolygonInteractor(object):
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, poly, markerfacecolor='r', marker='o'):
+    def __init__(self, ax, poly, markerfacecolor='r', marker='o', label="inside"):
         if poly.figure is None:
             raise RuntimeError(
                 'You must first add the polygon to a figure or canvas before defining the interactor')
@@ -45,6 +46,9 @@ class PolygonInteractor(object):
         x, y = zip(*self.poly.xy)
         self.line = Line2D(
             x, y, marker=marker, markerfacecolor=markerfacecolor, animated=True)
+        self.text = Text(
+            self.spoly.centroid.x, self.spoly.centroid.y, text=label, animated=True)
+        self.ax.add_artist(self.text)
         self.ax.add_line(self.line)
         # self._update_line(poly)
 
@@ -72,6 +76,7 @@ class PolygonInteractor(object):
         self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
+        self.ax.draw_artist(self.text)
         self.canvas.blit(self.ax.bbox)
 
     def poly_changed(self, poly):
@@ -164,14 +169,17 @@ class PolygonInteractor(object):
 
         self.poly.xy[self._ind] = x, y
         self.line.set_data(zip(*self.poly.xy))
+        # update shapely polygon
+        self.spoly = SPolygon(self.poly.get_xy())
+        # update text coordinates
+        self.text.set_x(self.spoly.centroid.x)
+        self.text.set_y(self.spoly.centroid.y)
 
         self.canvas.restore_region(self.background)
         for artist in self.ax.get_children():
-            if type(artist) in [Line2D, Polygon]:
+            if type(artist) in [Line2D, Polygon, Text]:
                 self.ax.draw_artist(artist)
         self.canvas.blit(self.ax.bbox)
-        # update shapely polygon
-        self.spoly = SPolygon(self.poly.get_xy())
 
     def remove(self):
         for connection in self.connections:
@@ -179,10 +187,12 @@ class PolygonInteractor(object):
 
         self.poly.remove()
         self.line.remove()
+        self.text.remove()
 
 
 def show_image(ax, imgpath):
     im = mpimg.imread(imgpath)
+    ax.clear()
     ax.imshow(im)
 
 
@@ -221,25 +231,23 @@ def sane_rect_coord(ax, xperc=[0.1, 0.4], yperc=[0.1, 0.9]):
 
 class TwoPolys(object):
 
-    def __init__(self, fig, ax, impath):
+    def __init__(self, fig, ax):
 
         self.ax = ax
         self.fig = fig
-        show_image(ax, impath)
 
         xs, ys = sane_rect_coord(self.ax)
         poly = Polygon(
             list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
         self.ax.add_patch(poly)
-        self.p1 = PolygonInteractor(self.ax, poly)
+        self.p1 = PolygonInteractor(self.ax, poly, label="Torso")
 
         xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
         poly1 = Polygon(
             list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
         self.ax.add_patch(poly1)
-        self.p2 = PolygonInteractor(self.ax, poly1)
+        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt")
         # ax.add_line(p.line)
-        self.ax.set_title(os.path.split(impath)[1])
 
     def load_new_image(self, impath):
         self.p1.remove()
@@ -250,13 +258,13 @@ class TwoPolys(object):
         poly = Polygon(
             list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
         self.ax.add_patch(poly)
-        self.p1 = PolygonInteractor(self.ax, poly)
+        self.p1 = PolygonInteractor(self.ax, poly, label="Torso")
 
         xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
         poly1 = Polygon(
             list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
         self.ax.add_patch(poly1)
-        self.p2 = PolygonInteractor(self.ax, poly1)
+        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt")
         self.ax.set_title(os.path.split(impath)[1])
         self.fig.canvas.draw()
 
