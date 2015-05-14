@@ -78,9 +78,13 @@ class ImageSelector(object):
         y1 = list(self.polys.p1.poly.get_xy()[:, 1])
         x2 = list(self.polys.p2.poly.get_xy()[:, 0])
         y2 = list(self.polys.p2.poly.get_xy()[:, 1])
+        area_torso = self.polys.p1.area
+        area_total = self.polys.p2.area
         fid = open(self.get_current_json_fname(), mode='w')
         json.dump({'x1': x1, 'y1': y1,
-                   'x2': x2, 'y2': y2}, fid)
+                   'x2': x2, 'y2': y2,
+                   'area_torso': area_torso,
+                   'area_total': area_total}, fid)
 
     def next_image(self):
         self.save_current_json_coord()
