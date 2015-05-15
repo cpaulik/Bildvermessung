@@ -68,6 +68,7 @@ button.pack(side=Tk.BOTTOM)
 
 dirdialog = ImageSelector(root, polys)
 
+dirdialog.askdirectory()
 
 Tk.mainloop()
 # If you put root.destroy() here, it will cause an error if
