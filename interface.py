@@ -51,9 +51,8 @@ def on_key_event(event):
         dirdialog.next_image()
     if event.key == 'left':
         dirdialog.prev_image()
-    key_press_handler(event, canvas, toolbar)
 
-canvas.mpl_connect('key_press_event', on_key_event)
+keypress_cbid = canvas.mpl_connect('key_press_event', on_key_event)
 
 
 def global_draw_callback(event):
@@ -61,7 +60,7 @@ def global_draw_callback(event):
     canvas.blit(a.bbox)
 
 
-canvas.mpl_connect('draw_event', global_draw_callback)
+draw_cbid = canvas.mpl_connect('draw_event', global_draw_callback)
 
 
 def _quit():

@@ -57,6 +57,7 @@ class PolygonInteractor(object):
         self.ax.add_artist(self.text)
         self.ax.add_line(self.line)
         # self._update_line(poly)
+        self.control_pressed = False
 
         cid = self.poly.add_callback(self.poly_changed)
         self._ind = None  # the active vert
@@ -68,6 +69,10 @@ class PolygonInteractor(object):
             canvas.mpl_connect('button_press_event', self.button_press_callback))
         self.connections.append(
             canvas.mpl_connect('key_press_event', self.key_press_callback))
+        self.connections.append(
+            canvas.mpl_connect('key_release_event', self.key_release_callback))
+        # self.connections.append(
+        #     canvas.mpl_connect('pick_event', self.pick_event_callback))
         self.connections.append(canvas.mpl_connect(
             'button_release_event', self.button_release_callback))
         self.connections.append(
@@ -113,13 +118,17 @@ class PolygonInteractor(object):
 
     def button_press_callback(self, event):
         'whenever a mouse button is pressed'
-        print event.button
         if not self.showverts:
             return
         if event.inaxes == None:
             return
         if event.button not in [self.mbutton]:
             return
+        if self.control_pressed:
+            self.start_x = event.xdata
+            self.start_y = event.ydata
+            self.start_x0, self.start_y0 = self.poly.xy[
+                :, 0], self.poly.xy[:, 1]
         self._ind = self.get_ind_under_point(event)
 
     def button_release_callback(self, event):
@@ -162,7 +171,16 @@ class PolygonInteractor(object):
             # display coords
             self.insert_point(event.x, event.y, event.xdata, event.ydata)
 
+        if event.key == 'control':
+            self.control_pressed = True
+
         self.canvas.draw()
+
+    def key_release_callback(self, event):
+        if event.key == 'control':
+            self.control_pressed = False
+        self.canvas.draw()
+        return
 
     def insert_point(self, x, y, xdata, ydata):
         coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
@@ -189,11 +207,29 @@ class PolygonInteractor(object):
             return
         if event.inaxes is None:
             return
-        if self._ind is None:
-            x, y = event.xdata, event.ydata
-            ind = self.get_ind_under_point(event, check_epsilon=False)
+        if self.control_pressed is False:
+            if self._ind is None:
+                x, y = event.xdata, event.ydata
+                ind = self.get_ind_under_point(event, check_epsilon=False)
 
-            self.poly.xy[ind] = x, y
+                self.poly.xy[ind] = x, y
+                coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+                self.line.set_data(zip(*coords))
+                # update shapely polygon
+                self.spoly = SPolygon(self.poly.get_xy())
+                # update text coordinates
+                self.text.set_x(self.spoly.centroid.x)
+                self.text.set_y(self.spoly.centroid.y)
+
+                self.canvas.restore_region(self.background)
+                self.ax.draw_artist(self.poly)
+                self.ax.draw_artist(self.line)
+                # self.ax.draw_artist(self.text)
+                self.canvas.blit(self.ax.bbox)
+                return
+            x, y = event.xdata, event.ydata
+
+            self.poly.xy[self._ind] = x, y
             coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
             self.line.set_data(zip(*coords))
             # update shapely polygon
@@ -207,23 +243,20 @@ class PolygonInteractor(object):
             self.ax.draw_artist(self.line)
             # self.ax.draw_artist(self.text)
             self.canvas.blit(self.ax.bbox)
-            return
-        x, y = event.xdata, event.ydata
-
-        self.poly.xy[self._ind] = x, y
-        coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
-        self.line.set_data(zip(*coords))
-        # update shapely polygon
-        self.spoly = SPolygon(self.poly.get_xy())
-        # update text coordinates
-        self.text.set_x(self.spoly.centroid.x)
-        self.text.set_y(self.spoly.centroid.y)
-
-        self.canvas.restore_region(self.background)
-        self.ax.draw_artist(self.poly)
-        self.ax.draw_artist(self.line)
-        # self.ax.draw_artist(self.text)
-        self.canvas.blit(self.ax.bbox)
+        else:
+            if self.poly.contains_point((event.x, event.y)):
+                offsetx = event.xdata - self.start_x
+                offsety = event.ydata - self.start_y
+                new_coords = np.vstack([self.start_x0 + offsetx,
+                                        self.start_y0 + offsety])
+                self.poly.xy = new_coords.T
+                coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+                self.line.set_data(zip(*coords))
+                self.canvas.restore_region(self.background)
+                self.ax.draw_artist(self.poly)
+                self.ax.draw_artist(self.line)
+                self.ax.draw_artist(self.text)
+                self.canvas.blit(self.ax.bbox)
 
     def remove(self):
         for connection in self.connections:
