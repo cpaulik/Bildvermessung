@@ -1,0 +1,43 @@
+* Bildervermessung
+
+Beim Start wird nach einem Ordner gefragt. In dem ausgewählten Ordner werden
+alle *.png und *.jpg Bilder vom Program erkannt.
+
+Es gibt zwei Polygone
+
+1. rotes Polygon ("Torso") wird mit der linken Maustaste manipuliert
+2. blaues Polygon ("Gesamt") wird mit der rechten Maustaste manipuliert
+
+Die mittlere Maustaste kann verwendet werden um neue Punkte zum Polygon
+hinzuzufügen oder zu löschen.
+
+** Tastenkürzel
+| Tastenkürzel | Kommando                                             |
+|--------------+------------------------------------------------------|
+| =->=         | nächstes Bild                                        |
+| =<-=         | voriges Bild                                         |
+| =Enter=      | nächstes Bild                                        |
+| =Strg=       | Polygon umherziehen                                  |
+| =i=          | Punkt zum Polygon hinzufügen (falls Maus über Kante) |
+| =d=          | Punkt unter Mauszeiger löschen                       |
+| =t=          | Punkte anzeigen/verstecken                           |
+
+** Speichern der Resultate
+Die Resultate werden automatisch beim Bildwechsel oder beim beenden des
+Programms über =Quit= gespeichert. Die Resultate für jedes Bild sind in einer
+Datei mit Namen =Bildname.json= gespeichert und werden automatisch geladen wenn
+das Bild nochmal geöffnet wird.
+
+
+* Installation
+
+** Windows
+- Installiere [[http://sourceforge.net/projects/winpython/files/WinPython_2.7/2.7.9.5/][WinPython]] (64 Bit) in einen beliebigen Ordner
+- Lade [[http://www.lfd.uci.edu/~gohlke/pythonlibs/r7to5k3j/Shapely-1.5.8-cp27-none-win_amd64.whl][Shapely]] für Windows runter.
+- Verwende das WinPythonControlPanel um die shapely =.whl= datei zu installieren.
+- Lade die drei Dateien dieses Programms in einen Ordner.
+- Öffne =WinPythonCommandPrompt.exe= 
+- Navigiere in den Ordner in dem sich dieses Programm befindet
+- Führe =python interface.py= aus. Das Programm sollte starten.
+
+
