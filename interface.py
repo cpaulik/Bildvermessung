@@ -13,7 +13,7 @@ from matplotlib.backend_bases import key_press_handler
 
 from matplotlib.figure import Figure
 
-from polygon_interactor import TwoPolys
+from polygon_interactor import TwoPolys, PolygonInteractor
 from filedialog import ImageSelector
 
 import sys
@@ -54,6 +54,14 @@ def on_key_event(event):
     key_press_handler(event, canvas, toolbar)
 
 canvas.mpl_connect('key_press_event', on_key_event)
+
+
+def global_draw_callback(event):
+    PolygonInteractor.background = canvas.copy_from_bbox(a.bbox)
+    canvas.blit(a.bbox)
+
+
+canvas.mpl_connect('draw_event', global_draw_callback)
 
 
 def _quit():

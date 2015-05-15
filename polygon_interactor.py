@@ -34,9 +34,11 @@ class PolygonInteractor(object):
     """
 
     showverts = True
-    epsilon = 5  # max pixel distance to count as a vertex hit
+    epsilon = 20  # max pixel distance to count as a vertex hit
+    background = None
 
-    def __init__(self, ax, poly, markerfacecolor='r', marker='o', label="inside"):
+    def __init__(self, ax, poly, markerfacecolor='r', marker='o', label="inside",
+                 mbutton=1):
         if poly.figure is None:
             raise RuntimeError(
                 'You must first add the polygon to a figure or canvas before defining the interactor')
@@ -44,9 +46,11 @@ class PolygonInteractor(object):
         canvas = poly.figure.canvas
         self.poly = poly
         self.spoly = SPolygon(poly.get_xy())
-        x, y = zip(*self.poly.xy)
+        self.mbutton = mbutton
+        coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+        x, y = zip(*coords)
         self.line = Line2D(
-            x, y, marker=marker, markerfacecolor=markerfacecolor, animated=True)
+            x, y, marker=marker, color='w', markerfacecolor=markerfacecolor, animated=True)
         self.text = Text(
             self.spoly.centroid.x, self.spoly.centroid.y, text=label, animated=True,
             color='w', backgroundcolor='k')
@@ -75,11 +79,14 @@ class PolygonInteractor(object):
         return self.spoly.area
 
     def draw_callback(self, event):
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
+        # update shapely polygon
+        self.spoly = SPolygon(self.poly.get_xy())
+        # update text coordinates
+        self.text.set_x(self.spoly.centroid.x)
+        self.text.set_y(self.spoly.centroid.y)
         self.ax.draw_artist(self.text)
-        self.canvas.blit(self.ax.bbox)
 
     def poly_changed(self, poly):
         'this method is called whenever the polygon object is called'
@@ -88,7 +95,7 @@ class PolygonInteractor(object):
         Artist.update_from(self.line, poly)
         self.line.set_visible(vis)  # don't use the poly visibility state
 
-    def get_ind_under_point(self, event):
+    def get_ind_under_point(self, event, check_epsilon=True):
         'get the index of the vertex under point if within epsilon tolerance'
 
         # display coords
@@ -99,18 +106,19 @@ class PolygonInteractor(object):
         indseq = np.nonzero(np.equal(d, np.amin(d)))[0]
         ind = indseq[0]
 
-        if d[ind] >= self.epsilon:
+        if d[ind] >= self.epsilon and check_epsilon:
             ind = None
 
         return ind
 
     def button_press_callback(self, event):
         'whenever a mouse button is pressed'
+        print event.button
         if not self.showverts:
             return
         if event.inaxes == None:
             return
-        if event.button != 1:
+        if event.button not in [self.mbutton]:
             return
         self._ind = self.get_ind_under_point(event)
 
@@ -118,8 +126,17 @@ class PolygonInteractor(object):
         'whenever a mouse button is released'
         if not self.showverts:
             return
-        if event.button != 1:
+        if event.button not in [self.mbutton, 2]:
             return
+        if event.button == 2:
+            ind = self.get_ind_under_point(event)
+            if ind is None:
+                self.insert_point(event.x, event.y, event.xdata, event.ydata)
+            else:
+                self.poly.xy = [
+                    tup for i, tup in enumerate(self.poly.xy) if i != ind]
+                coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+                self.line.set_data(zip(*coords))
         self._ind = None
         self.canvas.draw()
 
@@ -139,38 +156,63 @@ class PolygonInteractor(object):
             if ind is not None:
                 self.poly.xy = [
                     tup for i, tup in enumerate(self.poly.xy) if i != ind]
-                self.line.set_data(zip(*self.poly.xy))
+                coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+                self.line.set_data(zip(*coords))
         elif event.key == 'i':
-            xys = self.poly.get_transform().transform(self.poly.xy)
-            p = event.x, event.y  # display coords
-            for i in range(len(xys) - 1):
-                s0 = xys[i]
-                s1 = xys[i + 1]
-                d = dist_point_to_segment(p, s0, s1)
-                if d <= self.epsilon:
-                    self.poly.xy = np.array(
-                        list(self.poly.xy[:i]) +
-                        [(event.xdata, event.ydata)] +
-                        list(self.poly.xy[i:]))
-                    self.line.set_data(zip(*self.poly.xy))
-                    break
+            # display coords
+            self.insert_point(event.x, event.y, event.xdata, event.ydata)
 
         self.canvas.draw()
+
+    def insert_point(self, x, y, xdata, ydata):
+        coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+        xys = self.poly.get_transform().transform(coords)
+        p = x, y  # display coords
+        for i in range(len(xys) - 1):
+            s0 = xys[i]
+            s1 = xys[i + 1]
+            d = dist_point_to_segment(p, s0, s1)
+            if d <= self.epsilon:
+                self.poly.xy = np.array(
+                    list(coords[:i + 1]) +
+                    [(xdata, ydata)] +
+                    list(coords[i + 1:]))
+                coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+                self.line.set_data(zip(*coords))
+                break
 
     def motion_notify_callback(self, event):
         'on mouse movement'
         if not self.showverts:
             return
-        if self._ind is None:
+        if event.button not in [self.mbutton]:
             return
         if event.inaxes is None:
             return
-        if event.button != 1:
+        if self._ind is None:
+            x, y = event.xdata, event.ydata
+            ind = self.get_ind_under_point(event, check_epsilon=False)
+
+            self.poly.xy[ind] = x, y
+            coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+            self.line.set_data(zip(*coords))
+            # update shapely polygon
+            self.spoly = SPolygon(self.poly.get_xy())
+            # update text coordinates
+            self.text.set_x(self.spoly.centroid.x)
+            self.text.set_y(self.spoly.centroid.y)
+
+            self.canvas.restore_region(self.background)
+            self.ax.draw_artist(self.poly)
+            self.ax.draw_artist(self.line)
+            # self.ax.draw_artist(self.text)
+            self.canvas.blit(self.ax.bbox)
             return
         x, y = event.xdata, event.ydata
 
         self.poly.xy[self._ind] = x, y
-        self.line.set_data(zip(*self.poly.xy))
+        coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+        self.line.set_data(zip(*coords))
         # update shapely polygon
         self.spoly = SPolygon(self.poly.get_xy())
         # update text coordinates
@@ -178,9 +220,9 @@ class PolygonInteractor(object):
         self.text.set_y(self.spoly.centroid.y)
 
         self.canvas.restore_region(self.background)
-        for artist in self.ax.get_children():
-            if type(artist) in [Line2D, Polygon, Text]:
-                self.ax.draw_artist(artist)
+        self.ax.draw_artist(self.poly)
+        self.ax.draw_artist(self.line)
+        # self.ax.draw_artist(self.text)
         self.canvas.blit(self.ax.bbox)
 
     def remove(self):
@@ -248,7 +290,8 @@ class TwoPolys(object):
         poly1 = Polygon(
             list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
         self.ax.add_patch(poly1)
-        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt")
+        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt", mbutton=3,
+                                    markerfacecolor='b')
         # ax.add_line(p.line)
 
     def load_new_image(self, impath, x1=None, y1=None, x2=None, y2=None):
@@ -274,7 +317,8 @@ class TwoPolys(object):
         poly1 = Polygon(
             list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
         self.ax.add_patch(poly1)
-        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt")
+        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt", mbutton=3,
+                                    markerfacecolor='b')
         self.ax.set_title(os.path.split(impath)[1])
         self.fig.canvas.draw()
 
