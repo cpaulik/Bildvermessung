@@ -258,6 +258,13 @@ class PolygonInteractor(object):
                 self.ax.draw_artist(self.text)
                 self.canvas.blit(self.ax.bbox)
 
+    def updatexy(self, x, y):
+
+        new_coords = np.vstack([x, y])
+        self.poly.xy = new_coords.T
+        coords = np.vstack([self.poly.xy, self.poly.xy[0, :]])
+        self.line.set_data(zip(*coords))
+
     def remove(self):
         for connection in self.connections:
             self.canvas.mpl_disconnect(connection)
@@ -328,8 +335,6 @@ class TwoPolys(object):
         # ax.add_line(p.line)
 
     def load_new_image(self, impath, x1=None, y1=None, x2=None, y2=None):
-        self.p1.remove()
-        self.p2.remove()
         show_image(self.ax, impath)
 
         xs, ys = sane_rect_coord(self.ax)
@@ -337,21 +342,15 @@ class TwoPolys(object):
             xs = x1
         if y1 is not None:
             ys = y1
-        poly = Polygon(
-            list(zip(xs, ys)), color='r', closed=False, alpha=0.5, animated=True)
-        self.ax.add_patch(poly)
-        self.p1 = PolygonInteractor(self.ax, poly, label="Torso")
+        self.p1.updatexy(xs, ys)
 
         xs1, ys1 = sane_rect_coord(self.ax, xperc=[0.6, 0.9])
         if x2 is not None:
             xs1 = x2
         if y2 is not None:
             ys1 = y2
-        poly1 = Polygon(
-            list(zip(xs1, ys1)), closed=False, color='b', alpha=0.5, animated=True)
-        self.ax.add_patch(poly1)
-        self.p2 = PolygonInteractor(self.ax, poly1, label="Gesamt", mbutton=3,
-                                    markerfacecolor='b')
+        self.p2.updatexy(xs1, ys1)
+
         self.ax.set_title(os.path.split(impath)[1])
         self.fig.canvas.draw()
 
