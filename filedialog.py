@@ -5,6 +5,7 @@ import tkFileDialog
 import glob
 import os
 import json
+import csv
 
 
 class ImageSelector(object):
@@ -15,6 +16,9 @@ class ImageSelector(object):
         button_opt = {'fill': Tkconstants.BOTH, 'padx': 5, 'pady': 5}
 
         self.polys = polygons
+        self.filelist = []
+        self.selectedfile = None
+        self.dirname = None
         # define buttons
         Tk.Button(root, text='Verzeichnis auswählen', command=self.askdirectory).pack(
             **button_opt)
@@ -22,9 +26,12 @@ class ImageSelector(object):
         button.pack(side=Tk.RIGHT)
         button = Tk.Button(master=root, text='<-', command=self.prev_image)
         button.pack(side=Tk.LEFT)
-        self.filelist = []
-        self.selectedfile = None
-        self.dirname = None
+        button = Tk.Button(
+            master=root, text='CSV', command=self.convert_to_csv)
+        button.pack(side=Tk.BOTTOM)
+
+    def convert_to_csv(self):
+        convert_json_to_csv(self.dirname)
 
     def askdirectory(self):
         """Returns a selected directoryname."""
@@ -104,3 +111,26 @@ class ImageSelector(object):
             self.selectedfile += 1
         else:
             self.update_image()
+
+
+def convert_json_to_csv(dirname):
+    """
+    Go through all json files in directory and store values as csv
+    """
+
+    filelist = []
+    filetypes = ["*.json"]
+    for filetype in filetypes:
+        filelist.extend(glob.glob(os.path.join(dirname, filetype)))
+
+    filelist = sorted(filelist)
+
+    with open(os.path.join(dirname, "data.csv"), "w") as c:
+        writer = csv.writer(c, delimiter=";")
+        writer.writerow(["File", "Torso", "Koerper"])
+        for f in filelist:
+            with open(f, mode='r') as fid:
+                data = json.load(fid)
+                fname = os.path.splitext(os.path.basename(f))[0]
+                writer.writerow(
+                    [fname, data['area_torso'], data['area_total']])
